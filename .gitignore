@@ -18,5 +18,8 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Sensitive source data (uncomment if needed)
-# sources/
+# Sensitive source data
+sources/
+
+# Generated output
+output/
