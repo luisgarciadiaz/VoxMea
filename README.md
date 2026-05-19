@@ -81,4 +81,19 @@ cd VoxMea
 #    (Obsidian .md notes, articles, exported emails)
 
 # 3. Run the curation script (Phase 2)
-python scripts/curat
+python scripts/curate.py
+
+# 4. Build the dataset
+python scripts/build_dataset.py
+
+# 5. Test with your local LLM
+#    Load style_context.md as a system prompt in Ollama/LM Studio
+```
+
+## 📄 License
+
+Personal project for private use. All source texts are property of the author.
+
+---
+
+*Created by Luis Garcia Diaz — May 2026*
