@@ -29,13 +29,12 @@ try:
 except ImportError:
     import os
 
-SCRIPT_DIR = Path(__file__).parent
-PROJECT_DIR = SCRIPT_DIR.parent
-RESULTS_DIR = PROJECT_DIR / "tests" / "results"
-CONTROL_TEXT = PROJECT_DIR / "tests" / "control_text.md"
-STYLE_CONTEXT = PROJECT_DIR / "dataset" / "style_context.md"
-TEST_PROMPTS = PROJECT_DIR / "prompts" / "test_prompts.md"
-SYSTEM_PROMPT = PROJECT_DIR / "prompts" / "system_prompt.md"
+BASE = Path(__file__).resolve().parent.parent.parent
+RESULTS_DIR = BASE / "pipeline" / "tests" / "results"
+CONTROL_TEXT = BASE / "pipeline" / "tests" / "control_text.md"
+STYLE_CONTEXT = BASE / "pipeline" / "dataset" / "style_context.md"
+TEST_PROMPTS = BASE / "pipeline" / "prompts" / "test_prompts.md"
+SYSTEM_PROMPT = BASE / "pipeline" / "prompts" / "system_prompt.md"
 
 
 def get_config():

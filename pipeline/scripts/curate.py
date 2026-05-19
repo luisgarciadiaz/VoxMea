@@ -34,9 +34,10 @@ except ImportError:
 import email
 from email import policy
 
-SOURCE_DIR = Path("sources")
-CURATED_DIR = Path("curated")
-REDACTION_CONFIG = Path("redaction_patterns.yaml")
+BASE = Path(__file__).resolve().parent.parent.parent
+SOURCE_DIR = BASE / "sources"
+CURATED_DIR = BASE / "pipeline" / "curated"
+REDACTION_CONFIG = BASE / "pipeline" / "redaction_patterns.yaml"
 
 DEFAULT_PATTERNS = {
     "email": r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
@@ -84,14 +85,15 @@ def load_redaction_patterns(config_path):
     if config_path.exists() and yaml:
         with open(config_path, "r", encoding="utf-8") as f:
             custom = yaml.safe_load(f)
-        if custom:
-            user_patterns = custom.get("patterns", {})
+        if custom and isinstance(custom, dict):
+            user_patterns = custom.get("patterns") or {}
             for name, pattern in user_patterns.items():
                 if pattern is None or pattern == "":
                     patterns.pop(name, None)
                 else:
                     patterns[name] = pattern
-            for name, pattern in custom.get("custom_patterns", {}).items():
+            user_custom = custom.get("custom_patterns") or {}
+            for name, pattern in user_custom.items():
                 patterns[f"custom_{name}"] = pattern
 
     return patterns
@@ -273,15 +275,16 @@ def print_stats():
 
 def main():
     parser = argparse.ArgumentParser(description="VoxMea - Text Curation Pipeline")
-    parser.add_argument("-s", "--source", default="sources", help="Source directory (default: sources/)")
-    parser.add_argument("-o", "--output", default="curated", help="Output directory (default: curated/)")
-    parser.add_argument("-c", "--config", default="redaction_patterns.yaml", help="Redaction config path")
+    parser.add_argument("-s", "--source", help="Source directory")
+    parser.add_argument("-o", "--output", help="Output directory")
+    parser.add_argument("-c", "--config", help="Redaction config path")
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
     args = parser.parse_args()
 
-    global SOURCE_DIR, CURATED_DIR
-    SOURCE_DIR = Path(args.source)
-    CURATED_DIR = Path(args.output)
+    global SOURCE_DIR, CURATED_DIR, REDACTION_CONFIG
+    SOURCE_DIR = Path(args.source) if args.source else SOURCE_DIR
+    CURATED_DIR = Path(args.output) if args.output else CURATED_DIR
+    REDACTION_CONFIG = Path(args.config) if args.config else REDACTION_CONFIG
 
     if not SOURCE_DIR.exists():
         print(f"Source directory not found: {SOURCE_DIR}")
@@ -290,7 +293,7 @@ def main():
 
     CURATED_DIR.mkdir(parents=True, exist_ok=True)
 
-    patterns = load_redaction_patterns(Path(args.config))
+    patterns = load_redaction_patterns(REDACTION_CONFIG)
     print(f"Loaded {len(patterns)} redaction patterns")
 
     files = []

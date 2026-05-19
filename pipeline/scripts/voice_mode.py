@@ -6,6 +6,7 @@ Connects to the configured LLM with style_context.md as system prompt.
 """
 
 import argparse
+import re
 import sys
 import time
 from datetime import datetime
@@ -24,12 +25,11 @@ try:
 except ImportError:
     import os
 
-SCRIPT_DIR = Path(__file__).parent
-PROJECT_DIR = SCRIPT_DIR.parent
-DATASET_DIR = PROJECT_DIR / "dataset"
+BASE = Path(__file__).resolve().parent.parent.parent
+DATASET_DIR = BASE / "pipeline" / "dataset"
 STYLE_CONTEXT = DATASET_DIR / "style_context.md"
-OUTPUT_DIR = PROJECT_DIR / "output"
-LOG_DIR = PROJECT_DIR / "docs" / "logs"
+OUTPUT_DIR = BASE / "pipeline" / "output"
+LOG_DIR = BASE / "logs"
 
 
 def get_config():
@@ -124,7 +124,7 @@ def generate_text(config, system_prompt, topic, char_count):
         raise ValueError(f"Unknown backend: {config['backend']}")
 
 
-def save_output(topic, text):
+def save_output(topic, text, target_chars):
     """Save generated text to output/ directory."""
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     safe_topic = re.sub(r'[^\w\s-]', '', topic).strip().replace(' ', '_')[:40]
@@ -133,7 +133,7 @@ def save_output(topic, text):
 
     content = f"# {topic}\n\n"
     content += f"Generated: {datetime.now().isoformat()}\n"
-    content += f"Character target: ~{char_count}\n"
+    content += f"Character target: ~{target_chars}\n"
     content += f"Actual characters: {len(text)}\n"
     content += f"Actual words: {len(text.split())}\n\n"
     content += "---\n\n"
@@ -165,7 +165,7 @@ def main():
         description="VoxMea — Voice Mode: Generate text in the author's voice."
     )
     parser.add_argument("--topic", "-t", help="Topic or phrase to write about")
-    parser.add_argument("--chars", "-c", type=int, help="Target character count")
+    parser.add_argument("--chars", "-c", type=str, help="Target character count (e.g. 35000 or 35,000)")
     parser.add_argument("--interactive", "-i", action="store_true",
                         help="Interactive mode (prompt for topic and chars)")
     args = parser.parse_args()
@@ -173,7 +173,7 @@ def main():
     # Determine mode
     if args.topic and args.chars:
         topic = args.topic
-        char_count = args.chars
+        char_count = int(str(args.chars).replace(",", ""))
     elif args.interactive or not (args.topic and args.chars):
         print("VoxMea — Voice Mode (Interactive)")
         print("=" * 50)
@@ -181,7 +181,7 @@ def main():
         while not topic:
             topic = input("Topic cannot be empty: ").strip()
         char_input = input("Target character count (e.g. 500, 2000): ").strip()
-        char_count = int(char_input) if char_input.isdigit() else 2000
+        char_count = int(char_input.replace(",", "")) if char_input.replace(",", "").isdigit() else 2000
     else:
         parser.print_help()
         sys.exit(0)
@@ -218,8 +218,7 @@ def main():
                   f"adjusting max tokens.")
 
         # Save
-        import re
-        output_path = save_output(topic, text)
+        output_path = save_output(topic, text, char_count)
         print(f"Saved to: {output_path}")
 
         log_session(topic, char_count, output_path, success=True)

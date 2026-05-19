@@ -12,8 +12,9 @@ import re
 import sys
 from pathlib import Path
 
-CURATED_DIR = Path("curated")
-DATASET_DIR = Path("dataset")
+BASE = Path(__file__).resolve().parent.parent.parent
+CURATED_DIR = BASE / "pipeline" / "curated"
+DATASET_DIR = BASE / "pipeline" / "dataset"
 STYLE_CONTEXT = DATASET_DIR / "style_context.md"
 UNIFIED_CORPUS = DATASET_DIR / "unified_corpus.txt"
 DATASET_JSONL = DATASET_DIR / "dataset.jsonl"

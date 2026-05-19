@@ -1,0 +1,8 @@
+# Source texts (may contain personal data)
+sources/
+
+# Generated output
+output/
+
+# Environment config
+.env

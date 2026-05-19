@@ -11,8 +11,9 @@ import statistics
 from collections import Counter
 from pathlib import Path
 
-CURATED_DIR = Path("curated")
-DATASET_DIR = Path("dataset")
+BASE = Path(__file__).resolve().parent.parent.parent
+CURATED_DIR = BASE / "pipeline" / "curated"
+DATASET_DIR = BASE / "pipeline" / "dataset"
 OUTPUT_FILE = DATASET_DIR / "style_context.md"
 
 FILLER_WORDS = {
