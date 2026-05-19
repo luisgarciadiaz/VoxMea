@@ -130,10 +130,10 @@ def run_script(name):
 def print_header():
     """Print the VoxMea header."""
     print()
-    print("  ╔══════════════════════════════════════════╗")
-    print("  ║          VoxMea — Pipeline               ║")
-    print("  ║     Writing Style Cloning for AI          ║")
-    print("  ╚══════════════════════════════════════════╝")
+    print("  " + "+" + "-" * 42 + "+")
+    print("  |          VoxMea - Pipeline               |")
+    print("  |     Writing Style Cloning for AI          |")
+    print("  " + "+" + "-" * 42 + "+")
     print()
 
 
