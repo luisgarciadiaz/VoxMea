@@ -1,120 +1,120 @@
-# 🤖 Agentes — VoxMea
+# 🤖 Agents — VoxMea
 
-> Definición de los agentes de IA y sus roles dentro del pipeline de clonación de estilo.
+> Definition of AI agents and their roles within the writing style cloning pipeline.
 
 ---
 
-## Agente 1: Curator (Curador de Textos)
+## Agent 1: Curator
 
-**Rol:** Filtrar, limpiar y seleccionar textos que representen auténticamente el estilo del autor.
+**Role:** Filter, clean, and select texts that authentically represent the author's style.
 
-**Responsabilidades:**
-- Escanear la carpeta `sources/` en busca de archivos válidos (`.md`, `.txt`, `.eml`).
-- Eliminar bloques de código, logs, tablas de datos puros y contenido irrelevante al estilo.
-- Redactar información sensible (nombres propios, direcciones, datos financieros).
-- Clasificar textos por tipo: narrativo, argumentativo, informal, técnico-personal.
-- Depositar resultados en `curated/`.
+**Responsibilities:**
+- Scan the `sources/` folder for valid files (`.md`, `.txt`, `.eml`).
+- Remove code blocks, logs, raw data tables, and content irrelevant to style.
+- Redact sensitive information (proper names, addresses, financial data).
+- Classify texts by type: narrative, argumentative, informal, technical-personal.
+- Output results to `curated/`.
 
-**Criterios de Filtrado:**
-| Incluir ✅ | Excluir ❌ |
+**Filtering Criteria:**
+| Include ✅ | Exclude ❌ |
 |---|---|
-| Reflexiones personales | Código fuente |
-| Artículos de opinión | Logs de sistema |
-| Correos con tono personal | Datos tabulares puros |
-| Notas con voz propia | Copy-paste de terceros |
-| Borradores creativos | Templates sin personalizar |
+| Personal reflections | Source code |
+| Opinion articles | System logs |
+| Emails with personal tone | Raw tabular data |
+| Notes with unique voice | Third-party copy-paste |
+| Creative drafts | Unpersonalized templates |
 
 ---
 
-## Agente 2: Analyst (Analista de Estilo)
+## Agent 2: Analyst
 
-**Rol:** Examinar el corpus curado para extraer un perfil lingüístico detallado del autor.
+**Role:** Examine the curated corpus to extract a detailed linguistic profile of the author.
 
-**Responsabilidades:**
-- Analizar patrones de vocabulario, muletillas y expresiones recurrentes.
-- Identificar estructura sintáctica predominante (oraciones largas vs. cortas, uso de subordinadas).
-- Mapear tono emocional predominante por categoría de texto.
-- Detectar recursos retóricos frecuentes (metáforas, ironía, preguntas retóricas).
-- Generar el archivo `estilo_contexto.md` con el perfil de estilo resultante.
+**Responsibilities:**
+- Analyze vocabulary patterns, filler words, and recurring expressions.
+- Identify predominant syntactic structure (long vs. short sentences, subordinate clauses).
+- Map predominant emotional tone by text category.
+- Detect frequent rhetorical devices (metaphors, irony, rhetorical questions).
+- Generate `style_context.md` with the resulting style profile.
 
-**Dimensiones de Análisis:**
+**Analysis Dimensions:**
 ```
-├── Vocabulario        → Registro, tecnicismos, coloquialismos
-├── Sintaxis           → Longitud de oraciones, complejidad, ritmo
-├── Tono               → Formal/informal, serio/irónico, directo/sutil
-├── Estructura         → Párrafos, transiciones, uso de listas
-├── Marcadores         → Muletillas, conectores favoritos, puntuación
-└── Personalidad       → Humor, referencias culturales, analogías
+├── Vocabulary        → Register, jargon, colloquialisms
+├── Syntax            → Sentence length, complexity, rhythm
+├── Tone              → Formal/informal, serious/ironic, direct/subtle
+├── Structure         → Paragraphs, transitions, use of lists
+├── Markers           → Filler words, favorite connectors, punctuation
+└── Personality       → Humor, cultural references, analogies
 ```
 
 ---
 
-## Agente 3: Builder (Constructor del Dataset)
+## Agent 3: Builder
 
-**Rol:** Consolidar y formatear los textos curados en un dataset optimizado para el LLM.
+**Role:** Consolidate and format curated texts into a dataset optimized for the LLM.
 
-**Responsabilidades:**
-- Unificar los textos curados en `corpus_unificado.txt`.
-- Generar pares de prompt/completion en formato JSONL para fine-tuning (opcional).
-- Segmentar textos largos en chunks apropiados para ventana de contexto.
-- Agregar metadatos de contexto (tipo de texto, fecha, tema).
-- Validar integridad del dataset final.
+**Responsibilities:**
+- Unify curated texts into `unified_corpus.txt`.
+- Generate prompt/completion pairs in JSONL format for fine-tuning (optional).
+- Segment long texts into appropriate chunks for context window.
+- Add contextual metadata (text type, date, topic).
+- Validate final dataset integrity.
 
-**Formato de Salida JSONL (Opcional):**
+**JSONL Output Format (Optional):**
 ```json
 {
   "messages": [
-    {"role": "system", "content": "[System prompt con perfil de estilo]"},
-    {"role": "user", "content": "Escribe un párrafo sobre [tema]"},
-    {"role": "assistant", "content": "[Texto original del autor sobre ese tema]"}
+    {"role": "system", "content": "[System prompt with style profile]"},
+    {"role": "user", "content": "Write a paragraph about [topic]"},
+    {"role": "assistant", "content": "[Author's original text on that topic]"}
   ]
 }
 ```
 
 ---
 
-## Agente 4: Tester (Evaluador de Calidad)
+## Agent 4: Tester
 
-**Rol:** Validar que las generaciones del LLM repliquen fielmente el estilo del autor.
+**Role:** Validate that LLM generations faithfully replicate the author's style.
 
-**Responsabilidades:**
-- Ejecutar prompts de prueba contra el LLM configurado.
-- Comparar generaciones contra el texto de control seleccionado.
-- Evaluar fidelidad en las dimensiones: vocabulario, tono, estructura, personalidad.
-- Generar reportes de calidad con métricas de similitud.
-- Proponer ajustes al system prompt o al dataset según resultados.
+**Responsibilities:**
+- Execute test prompts against the configured LLM.
+- Compare generations against the selected control text.
+- Evaluate fidelity across dimensions: vocabulary, tone, structure, personality.
+- Generate quality reports with similarity metrics.
+- Propose adjustments to the system prompt or dataset based on results.
 
-**Métricas de Evaluación:**
-| Métrica | Descripción |
+**Evaluation Metrics:**
+| Metric | Description |
 |---|---|
-| Similitud Léxica | ¿Usa las mismas palabras y expresiones? |
-| Coherencia Tonal | ¿Mantiene el mismo tono y registro? |
-| Estructura Narrativa | ¿Sigue el mismo patrón de organización? |
-| Autenticidad Percibida | ¿Suena genuinamente como el autor? |
-| Creatividad Preservada | ¿Mantiene la chispa original sin ser genérico? |
+| Lexical Similarity | Does it use the same words and expressions? |
+| Tonal Coherence | Does it maintain the same tone and register? |
+| Narrative Structure | Does it follow the same organizational pattern? |
+| Perceived Authenticity | Does it genuinely sound like the author? |
+| Preserved Creativity | Does it maintain the original spark without being generic? |
 
 ---
 
-## Flujo de Trabajo entre Agentes
+## Agent Workflow
 
 ```mermaid
 graph LR
     A[📁 sources/] --> B[🧹 Curator]
     B --> C[📂 curated/]
     C --> D[🔍 Analyst]
-    D --> E[📝 estilo_contexto.md]
+    D --> E[📝 style_context.md]
     C --> F[🏗️ Builder]
     E --> F
     F --> G[📦 dataset/]
     G --> H[🧪 Tester]
-    H -->|Refinar| D
-    H -->|Aprobar| I[✅ LLM Configurado]
+    H -->|Refine| D
+    H -->|Approve| I[✅ Configured LLM]
 ```
 
 ---
 
-## Notas
+## Notes
 
-- Los agentes pueden ejecutarse como scripts independientes o como prompts especializados dentro del LLM.
-- El flujo es iterativo: los resultados del Tester alimentan refinamientos en el Analyst y Builder.
-- Cada agente mantiene logs en `docs/` para trazabilidad.
+- Agents can run as independent scripts or as specialized prompts within the LLM.
+- The flow is iterative: Tester results feed refinements back to the Analyst and Builder.
+- Each agent maintains logs in `docs/` for traceability.

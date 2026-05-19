@@ -1,268 +1,268 @@
-# 🏗️ Arquitectura — VoxMea
+# 🏗️ Architecture — VoxMea
 
-> Diseño técnico del pipeline de clonación de estilo de escritura.
+> Technical design of the writing style cloning pipeline.
 
 ---
 
-## Visión General
+## Overview
 
-VoxMea opera como un pipeline de datos en 3 etapas que transforma texto crudo personal en un perfil de estilo consumible por un LLM local.
+VoxMea operates as a 3-stage data pipeline that transforms raw personal text into a style profile consumable by a local LLM.
 
 ```mermaid
 graph TD
-    subgraph "Fase 1 — Extracción"
-        S1[Obsidian Vault] --> I[Ingesta]
-        S2[Correos] --> I
-        S3[Artículos] --> I
+    subgraph "Phase 1 — Extraction"
+        S1[Obsidian Vault] --> I[Ingestion]
+        S2[Emails] --> I
+        S3[Articles] --> I
         I --> RAW[sources/]
     end
 
-    subgraph "Fase 2 — Procesamiento"
-        RAW --> CUR[Curación & Filtrado]
+    subgraph "Phase 2 — Processing"
+        RAW --> CUR[Curation & Filtering]
         CUR --> CURATED[curated/]
-        CURATED --> ANAL[Análisis de Estilo]
-        ANAL --> PERFIL[estilo_contexto.md]
-        CURATED --> BUILD[Consolidación]
-        BUILD --> CORPUS[corpus_unificado.txt]
+        CURATED --> ANAL[Style Analysis]
+        ANAL --> PROFILE[style_context.md]
+        CURATED --> BUILD[Consolidation]
+        BUILD --> CORPUS[unified_corpus.txt]
         BUILD --> JSONL[dataset.jsonl]
     end
 
-    subgraph "Fase 3 — Integración"
-        PERFIL --> LLM[LLM Local]
+    subgraph "Phase 3 — Integration"
+        PROFILE --> LLM[Local LLM]
         CORPUS --> RAG[RAG / Smart Connections]
-        JSONL -.->|Opcional| FT[Fine-Tuning]
+        JSONL -.->|Optional| FT[Fine-Tuning]
         RAG --> LLM
         FT -.-> LLM
-        LLM --> OUT[Generación con Estilo]
+        LLM --> OUT[Styled Generation]
     end
 ```
 
 ---
 
-## Estructura de Directorios
+## Directory Structure
 
 ```
 VoxMea/
 │
-├── sources/                    # 📥 ENTRADA: Textos sin procesar
-│   ├── obsidian/               #    Notas exportadas de Obsidian
-│   ├── emails/                 #    Correos exportados (.eml, .txt)
-│   └── articles/               #    Artículos y posts
+├── sources/                    # 📥 INPUT: Raw unprocessed texts
+│   ├── obsidian/               #    Exported Obsidian notes
+│   ├── emails/                 #    Exported emails (.eml, .txt)
+│   └── articles/               #    Articles and posts
 │
-├── curated/                    # ✅ Textos filtrados y listos
-│   ├── narrativo/              #    Textos narrativos/reflexivos
-│   ├── argumentativo/          #    Artículos de opinión
-│   ├── informal/               #    Comunicación casual
-│   └── tecnico/                #    Escritura técnica con voz propia
+├── curated/                    # ✅ Filtered and ready texts
+│   ├── narrative/              #    Narrative/reflective texts
+│   ├── argumentative/          #    Opinion articles
+│   ├── informal/               #    Casual communication
+│   └── technical/              #    Technical writing with personal voice
 │
-├── dataset/                    # 📦 SALIDA: Dataset para el LLM
-│   ├── estilo_contexto.md      #    System prompt con perfil de estilo
-│   ├── corpus_unificado.txt    #    Todos los textos en un solo archivo
-│   └── dataset.jsonl           #    (Opcional) Pares para fine-tuning
+├── dataset/                    # 📦 OUTPUT: Dataset for the LLM
+│   ├── style_context.md        #    System prompt with style profile
+│   ├── unified_corpus.txt      #    All texts in a single file
+│   └── dataset.jsonl           #    (Optional) Pairs for fine-tuning
 │
-├── scripts/                    # ⚙️ Scripts de procesamiento
-│   ├── curate.py               #    Filtrado y limpieza de textos
-│   ├── analyze_style.py        #    Análisis lingüístico
-│   ├── build_dataset.py        #    Construcción del dataset
-│   └── test_generation.py      #    Pruebas de generación
+├── scripts/                    # ⚙️ Processing scripts
+│   ├── curate.py               #    Text filtering and cleaning
+│   ├── analyze_style.py        #    Linguistic analysis
+│   ├── build_dataset.py        #    Dataset construction
+│   └── test_generation.py      #    Generation testing
 │
-├── prompts/                    # 💬 Prompts y plantillas
-│   ├── system_prompt.md        #    Prompt de sistema base
-│   └── test_prompts.md         #    Prompts de prueba
+├── prompts/                    # 💬 Prompts and templates
+│   ├── system_prompt.md        #    Base system prompt
+│   └── test_prompts.md         #    Test prompts
 │
-├── tests/                      # 🧪 Textos de control y resultados
-│   ├── control_text.md         #    Texto de referencia
-│   └── results/                #    Resultados de pruebas
+├── tests/                      # 🧪 Control texts and results
+│   ├── control_text.md         #    Reference text
+│   └── results/                #    Test results
 │
-└── docs/                       # 📚 Documentación y logs
-    ├── style_profile.md        #    Perfil de estilo detallado
-    └── logs/                   #    Logs de ejecución
+└── docs/                       # 📚 Documentation and logs
+    ├── style_profile.md        #    Detailed style profile
+    └── logs/                   #    Execution logs
 ```
 
 ---
 
-## Componentes Técnicos
+## Technical Components
 
-### 1. Motor de Ingesta (`scripts/curate.py`)
+### 1. Ingestion Engine (`scripts/curate.py`)
 
-**Entrada:** Archivos de `sources/`  
-**Salida:** Archivos limpios en `curated/`
+**Input:** Files from `sources/`  
+**Output:** Clean files in `curated/`
 
 ```
-Funcionalidades:
-├── Lectura de formatos: .md, .txt, .eml, .html
-├── Extracción de texto plano (strip de YAML frontmatter, HTML tags)
-├── Detección y remoción de bloques de código
-├── Redacción de datos sensibles (regex patterns)
-├── Clasificación por tipo de texto
-└── Reporte de estadísticas (palabras, archivos procesados)
+Features:
+├── Format reading: .md, .txt, .eml, .html
+├── Plain text extraction (strip YAML frontmatter, HTML tags)
+├── Code block detection and removal
+├── Sensitive data redaction (regex patterns)
+├── Text type classification
+└── Statistics report (word counts, files processed)
 ```
 
-**Dependencias:** `pathlib`, `re`, `yaml`, `beautifulsoup4`
+**Dependencies:** `pathlib`, `re`, `yaml`, `beautifulsoup4`
 
 ---
 
-### 2. Analizador de Estilo (`scripts/analyze_style.py`)
+### 2. Style Analyzer (`scripts/analyze_style.py`)
 
-**Entrada:** Corpus curado  
-**Salida:** `estilo_contexto.md`
+**Input:** Curated corpus  
+**Output:** `style_context.md`
 
 ```
-Análisis:
-├── Frecuencia de vocabulario (top N palabras, n-gramas)
-├── Longitud promedio de oraciones y párrafos
-├── Ratio de puntuación (uso de —, ..., !, ?)
-├── Detección de muletillas y conectores recurrentes
-├── Clasificación de tono por segmento
-└── Perfil consolidado en lenguaje natural
+Analysis:
+├── Vocabulary frequency (top N words, n-grams)
+├── Average sentence and paragraph length
+├── Punctuation ratio (use of —, ..., !, ?)
+├── Filler word and recurring connector detection
+├── Tone classification per segment
+└── Consolidated profile in natural language
 ```
 
-**Dependencias:** `collections`, `re`, `statistics`  
-**Opcional:** `spacy` (para análisis lingüístico profundo)
+**Dependencies:** `collections`, `re`, `statistics`  
+**Optional:** `spacy` (for deep linguistic analysis)
 
 ---
 
-### 3. Constructor de Dataset (`scripts/build_dataset.py`)
+### 3. Dataset Builder (`scripts/build_dataset.py`)
 
-**Entrada:** Textos curados + perfil de estilo  
-**Salida:** `corpus_unificado.txt`, `dataset.jsonl`
+**Input:** Curated texts + style profile  
+**Output:** `unified_corpus.txt`, `dataset.jsonl`
 
 ```
-Procesamiento:
-├── Concatenación con separadores de documento
-├── Chunking inteligente (respetando límites de párrafo)
-├── Generación de pares prompt/completion (JSONL)
-├── Validación de tokens (dentro de ventana de contexto)
-└── Metadatos por segmento (tipo, fecha, tema)
+Processing:
+├── Concatenation with document separators
+├── Smart chunking (respecting paragraph boundaries)
+├── Prompt/completion pair generation (JSONL)
+├── Token validation (within context window)
+└── Metadata per segment (type, date, topic)
 ```
 
-**Dependencias:** `json`, `pathlib`, `tiktoken` (opcional para conteo de tokens)
+**Dependencies:** `json`, `pathlib`, `tiktoken` (optional for token counting)
 
 ---
 
-### 4. Motor de Pruebas (`scripts/test_generation.py`)
+### 4. Testing Engine (`scripts/test_generation.py`)
 
-**Entrada:** Prompts de prueba + LLM configurado  
-**Salida:** Resultados comparativos
+**Input:** Test prompts + configured LLM  
+**Output:** Comparative results
 
 ```
-Evaluación:
-├── Llamada a API local (Ollama REST / LM Studio)
-├── Generación con N prompts de prueba
-├── Comparación automática vs texto de control
-├── Reporte de métricas de similitud
-└── Log de resultados en tests/results/
+Evaluation:
+├── Local API calls (Ollama REST / LM Studio)
+├── Generation with N test prompts
+├── Automated comparison vs control text
+├── Similarity metrics report
+└── Result logging in tests/results/
 ```
 
-**Dependencias:** `requests`, `difflib`
+**Dependencies:** `requests`, `difflib`
 
 ---
 
-## Integración con LLM Local
+## Local LLM Integration
 
-### Opción A: Prompt de Contexto (Recomendado para inicio)
+### Option A: Context Prompting (Recommended to start)
 
 ```
 ┌─────────────────────────────────────┐
 │         System Prompt               │
 │  ┌───────────────────────────────┐  │
-│  │   estilo_contexto.md          │  │
-│  │   (Perfil de estilo)          │  │
+│  │   style_context.md            │  │
+│  │   (Style profile)             │  │
 │  └───────────────────────────────┘  │
 │  ┌───────────────────────────────┐  │
-│  │   Fragmentos del corpus       │  │
-│  │   (Ejemplos representativos)  │  │
+│  │   Corpus fragments            │  │
+│  │   (Representative examples)   │  │
 │  └───────────────────────────────┘  │
 ├─────────────────────────────────────┤
 │         User Prompt                 │
-│  "Escribe sobre [tema]..."          │
+│  "Write about [topic]..."           │
 └─────────────────────────────────────┘
 ```
 
-### Opción B: RAG (Retrieval-Augmented Generation)
+### Option B: RAG (Retrieval-Augmented Generation)
 
 ```
-User Query → Embedding → Vector Search → Fragmentos relevantes → LLM → Respuesta con estilo
+User Query → Embedding → Vector Search → Relevant fragments → LLM → Styled response
                               ↕
-                    corpus indexado
+                    Indexed corpus
                   (Smart Connections)
 ```
 
-### Opción C: Fine-Tuning (Avanzado)
+### Option C: Fine-Tuning (Advanced)
 
 ```
-dataset.jsonl → Fine-Tuning (LoRA/QLoRA) → Modelo personalizado → Generación nativa
+dataset.jsonl → Fine-Tuning (LoRA/QLoRA) → Custom model → Native generation
 ```
 
 ---
 
-## Flujo de Datos
+## Data Flow
 
 ```mermaid
 sequenceDiagram
-    participant U as Usuario
+    participant U as User
     participant C as Curator
     participant A as Analyst
     participant B as Builder
-    participant L as LLM Local
+    participant L as Local LLM
     participant T as Tester
 
-    U->>C: Deposita textos en sources/
-    C->>C: Filtra y clasifica
-    C->>A: Textos curados
-    A->>A: Analiza patrones de estilo
-    A->>B: Perfil de estilo
-    C->>B: Textos curados
-    B->>B: Consolida dataset
-    B->>L: Configura system prompt + corpus
-    U->>L: Prompt de prueba
-    L->>T: Generación
-    T->>T: Compara vs control
-    T-->>A: Feedback para refinar
-    T-->>U: Reporte de calidad
+    U->>C: Deposits texts in sources/
+    C->>C: Filters and classifies
+    C->>A: Curated texts
+    A->>A: Analyzes style patterns
+    A->>B: Style profile
+    C->>B: Curated texts
+    B->>B: Consolidates dataset
+    B->>L: Configures system prompt + corpus
+    U->>L: Test prompt
+    L->>T: Generation
+    T->>T: Compares vs control
+    T-->>A: Feedback for refinement
+    T-->>U: Quality report
 ```
 
 ---
 
-## Configuración del Entorno
+## Environment Configuration
 
-### Variables de Entorno (`.env`)
+### Environment Variables (`.env`)
 ```env
 # LLM Backend
 LLM_BACKEND=ollama          # ollama | lmstudio
 OLLAMA_HOST=http://localhost:11434
 LMSTUDIO_HOST=http://localhost:1234
 
-# Modelo
-MODEL_NAME=llama3.2          # Modelo base a utilizar
-MAX_CONTEXT_TOKENS=8192      # Ventana de contexto máxima
+# Model
+MODEL_NAME=llama3.2          # Base model to use
+MAX_CONTEXT_TOKENS=8192      # Maximum context window
 
-# Procesamiento
-CHUNK_SIZE=2000              # Tokens por chunk
-CHUNK_OVERLAP=200            # Overlap entre chunks
+# Processing
+CHUNK_SIZE=2000              # Tokens per chunk
+CHUNK_OVERLAP=200            # Overlap between chunks
 ```
 
-### Requisitos Python
+### Python Requirements
 ```
 beautifulsoup4>=4.12
 pyyaml>=6.0
 requests>=2.31
-tiktoken>=0.5      # Opcional: conteo de tokens
-spacy>=3.7         # Opcional: NLP avanzado
+tiktoken>=0.5      # Optional: token counting
+spacy>=3.7         # Optional: advanced NLP
 ```
 
 ---
 
-## Decisiones de Diseño
+## Design Decisions
 
-| Decisión | Elección | Justificación |
+| Decision | Choice | Justification |
 |---|---|---|
-| LLM Backend | Ollama (primario) | Más ligero, API REST simple, soporte de modelos abiertos |
-| Método inicial | Prompt de contexto | Más rápido de iterar que fine-tuning |
-| Formato corpus | TXT plano | Compatible universal, sin overhead de parsing |
-| Fine-tuning format | JSONL | Estándar de la industria para training data |
-| Análisis de estilo | Regex + estadísticas | Sin dependencias pesadas; spaCy como upgrade opcional |
+| LLM Backend | Ollama (primary) | Lightweight, simple REST API, open model support |
+| Initial method | Context prompting | Faster to iterate than fine-tuning |
+| Corpus format | Plain TXT | Universal compatibility, no parsing overhead |
+| Fine-tuning format | JSONL | Industry standard for training data |
+| Style analysis | Regex + statistics | No heavy dependencies; spaCy as optional upgrade |
 
 ---
 
-*Última actualización: Mayo 2026*
+*Last updated: May 2026*
