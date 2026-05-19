@@ -101,13 +101,16 @@ def call_llamacpp(host, system_prompt, user_prompt, max_tokens):
 
 def generate_text(config, system_prompt, topic, char_count):
     """Generate text in the author's voice."""
-    max_tokens = min(char_count // 2 + 200, int(os.getenv("MAX_CONTEXT_TOKENS", 8192)))
+    max_context = int(os.getenv("MAX_CONTEXT_TOKENS", "32768"))
+    max_tokens = min(char_count, max_context)
 
     user_prompt = (
         f"Write in your natural voice. "
         f"Topic: {topic}\n\n"
-        f"The response should be approximately {char_count} characters long. "
-        f"Write naturally — do not pad or cut short artificially."
+        f"Write a thorough, detailed response of approximately {char_count} characters "
+        f"(that's about {char_count // 5} words). Go deep — explore the topic fully "
+        f"with multiple paragraphs, examples, and personal reflections. "
+        f"Do NOT summarize or cut short. Write until the topic is fully covered."
     )
 
     host = config["ollama_host"] if config["backend"] == "ollama" \
