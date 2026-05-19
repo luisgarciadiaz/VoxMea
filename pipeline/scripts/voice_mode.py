@@ -100,31 +100,77 @@ def call_llamacpp(host, system_prompt, user_prompt, max_tokens):
 
 
 def generate_text(config, system_prompt, topic, char_count):
-    """Generate text in the author's voice."""
+    """Generate text in the author's voice, saving each part incrementally."""
     max_context = int(os.getenv("MAX_CONTEXT_TOKENS", "32768"))
-    max_tokens = min(char_count, max_context)
-
-    user_prompt = (
-        f"Write in your natural voice. "
-        f"Topic: {topic}\n\n"
-        f"Write a thorough, detailed response of approximately {char_count} characters "
-        f"(that's about {char_count // 5} words). Go deep — explore the topic fully "
-        f"with multiple paragraphs, examples, and personal reflections. "
-        f"Do NOT summarize or cut short. Write until the topic is fully covered."
-    )
+    max_gen = min(4096, max_context - 1024)
 
     host = config["ollama_host"] if config["backend"] == "ollama" \
         else config["lmstudio_host"] if config["backend"] == "lmstudio" \
         else config["llamacpp_host"]
 
-    if config["backend"] == "ollama":
-        return call_ollama(host, config["model"], system_prompt, user_prompt, max_tokens)
-    elif config["backend"] == "lmstudio":
-        return call_lmstudio(host, config["model"], system_prompt, user_prompt, max_tokens)
-    elif config["backend"] == "llamacpp":
-        return call_llamacpp(host, system_prompt, user_prompt, max_tokens)
-    else:
-        raise ValueError(f"Unknown backend: {config['backend']}")
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    safe_topic = re.sub(r'[^\w\s-]', '', topic).strip().replace(' ', '_')[:40]
+    filename = f"{datetime.now().strftime('%Y-%m-%d')}_{safe_topic}.md"
+    filepath = OUTPUT_DIR / filename
+
+    parts = []
+    target = max(char_count, 2000)
+    stall_limit = 5
+
+    while True:
+        part_num = len(parts) + 1
+
+        if part_num == 1:
+            prompt = (
+                f"Write in your natural voice. "
+                f"Topic: {topic}\n\n"
+                f"Write a detailed section exploring one aspect of this topic. "
+                f"Use multiple paragraphs. Do NOT summarize or conclude — "
+                f"just develop the ideas naturally."
+            )
+        else:
+            prompt = (
+                f"Keep writing in the same voice. Develop another aspect of the topic. "
+                f"Do NOT repeat what was already said. Do NOT wrap up or conclude. "
+                f"Just keep going deeper.\n\n"
+                f"[End of previous section for reference]:\n{parts[-1][-300:]}"
+            )
+
+        if config["backend"] == "ollama":
+            chunk = call_ollama(host, config["model"], system_prompt, prompt, max_gen)
+        elif config["backend"] == "lmstudio":
+            chunk = call_lmstudio(host, config["model"], system_prompt, prompt, max_gen)
+        elif config["backend"] == "llamacpp":
+            chunk = call_llamacpp(host, system_prompt, prompt, max_gen)
+        else:
+            raise ValueError(f"Unknown backend: {config['backend']}")
+
+        chunk = chunk.strip()
+        parts.append(chunk)
+        total = len("\n\n".join(parts))
+        print(f"\n  [Part {part_num}] +{len(chunk)} chars  (total: {total})")
+
+        # Save incrementally
+        full_text = "\n\n".join(parts)
+        content = f"# {topic}\n\n"
+        content += f"Generated: {datetime.now().isoformat()}\n"
+        content += f"Character target: ~{char_count}\n"
+        content += f"Actual characters: {len(full_text)}\n"
+        content += f"Actual words: {len(full_text.split())}\n\n"
+        content += "---\n\n"
+        content += full_text
+        filepath.write_text(content, encoding="utf-8")
+
+        if len(full_text) >= target:
+            break
+
+        if len(chunk) < 100:
+            stall_limit -= 1
+            if stall_limit <= 0:
+                print("  (model stopped generating early)")
+                break
+
+    return full_text, filepath
 
 
 def save_output(topic, text, target_chars):

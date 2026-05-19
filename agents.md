@@ -1,97 +1,91 @@
-# 🤖 Agents — VoxMea
+# Agents — VoxMea
 
-> Definition of AI agents and their roles within the writing style cloning pipeline.
+> AI agent definitions within the writing style cloning pipeline.
 
 ---
 
 ## Agent 1: Curator
 
+**Script:** `pipeline/scripts/curate.py`
+
 **Role:** Filter, clean, and select texts that authentically represent the author's style.
 
 **Responsibilities:**
-- Scan the `sources/` folder for valid files (`.md`, `.txt`, `.eml`).
-- Remove code blocks, logs, raw data tables, and content irrelevant to style.
-- Redact sensitive information (proper names, addresses, financial data).
-- Classify texts by type: narrative, argumentative, informal, technical-personal.
-- Output results to `curated/`.
-
-**Filtering Criteria:**
-| Include ✅ | Exclude ❌ |
-|---|---|
-| Personal reflections | Source code |
-| Opinion articles | System logs |
-| Emails with personal tone | Raw tabular data |
-| Notes with unique voice | Third-party copy-paste |
-| Creative drafts | Unpersonalized templates |
+- Scan `sources/` for valid files (`.md`, `.txt`, `.eml`, `.html`, `.docx`, `.pdf`)
+- Remove YAML frontmatter, code blocks, and content irrelevant to style
+- Redact sensitive data (emails, phones, addresses, financial info) via configurable regex
+- Classify texts by type: narrative, argumentative, informal, technical
+- Output clean files to `pipeline/curated/`
 
 ---
 
 ## Agent 2: Analyst
 
-**Role:** Examine the curated corpus to extract a detailed linguistic profile of the author.
+**Script:** `pipeline/scripts/analyze_style.py`
+
+**Role:** Examine the curated corpus and extract a detailed linguistic profile.
 
 **Responsibilities:**
-- Analyze vocabulary patterns, filler words, and recurring expressions.
-- Identify predominant syntactic structure (long vs. short sentences, subordinate clauses).
-- Map predominant emotional tone by text category.
-- Detect frequent rhetorical devices (metaphors, irony, rhetorical questions).
-- Generate `style_context.md` with the resulting style profile.
+- Analyze vocabulary patterns, word frequency, n-grams
+- Measure sentence structure (average length, std dev, rhythm)
+- Map punctuation fingerprint (em-dashes, ellipses, etc.)
+- Detect filler words and recurring connectors
+- Classify tone (formal/informal, serious/humorous)
+- Generate `pipeline/dataset/style_context.md`
 
 **Analysis Dimensions:**
 ```
-├── Vocabulary        → Register, jargon, colloquialisms
-├── Syntax            → Sentence length, complexity, rhythm
-├── Tone              → Formal/informal, serious/ironic, direct/subtle
-├── Structure         → Paragraphs, transitions, use of lists
-├── Markers           → Filler words, favorite connectors, punctuation
-└── Personality       → Humor, cultural references, analogies
+Vocabulary    → Register, jargon, colloquialisms
+Syntax        → Sentence length, complexity, rhythm
+Tone          → Formal/informal, serious/ironic, direct/subtle
+Structure     → Paragraphs, transitions, use of lists
+Markers       → Filler words, favorite connectors, punctuation
+Personality   → Humor, cultural references, analogies
 ```
 
 ---
 
 ## Agent 3: Builder
 
-**Role:** Consolidate and format curated texts into a dataset optimized for the LLM.
+**Script:** `pipeline/scripts/build_dataset.py`
+
+**Role:** Consolidate curated texts into LLM-ready formats.
 
 **Responsibilities:**
-- Unify curated texts into `unified_corpus.txt`.
-- Generate prompt/completion pairs in JSONL format for fine-tuning (optional).
-- Segment long texts into appropriate chunks for context window.
-- Add contextual metadata (text type, date, topic).
-- Validate final dataset integrity.
-
-**JSONL Output Format (Optional):**
-```json
-{
-  "messages": [
-    {"role": "system", "content": "[System prompt with style profile]"},
-    {"role": "user", "content": "Write a paragraph about [topic]"},
-    {"role": "assistant", "content": "[Author's original text on that topic]"}
-  ]
-}
-```
+- Unify texts into `pipeline/dataset/unified_corpus.txt` with document separators
+- Generate prompt/completion pairs in JSONL format for fine-tuning
+- Smart chunking respecting paragraph boundaries
+- Token counting via tiktoken
 
 ---
 
 ## Agent 4: Tester
 
+**Script:** `pipeline/scripts/test_generation.py`
+
 **Role:** Validate that LLM generations faithfully replicate the author's style.
 
 **Responsibilities:**
-- Execute test prompts against the configured LLM.
-- Compare generations against the selected control text.
-- Evaluate fidelity across dimensions: vocabulary, tone, structure, personality.
-- Generate quality reports with similarity metrics.
-- Propose adjustments to the system prompt or dataset based on results.
+- Execute test prompts against configured LLM (Ollama, LM Studio, llama.cpp)
+- Compare generations against control text
+- Evaluate: lexical similarity, sentence length, punctuation, readability
+- Save timestamped reports to `pipeline/tests/results/`
 
-**Evaluation Metrics:**
-| Metric | Description |
-|---|---|
-| Lexical Similarity | Does it use the same words and expressions? |
-| Tonal Coherence | Does it maintain the same tone and register? |
-| Narrative Structure | Does it follow the same organizational pattern? |
-| Perceived Authenticity | Does it genuinely sound like the author? |
-| Preserved Creativity | Does it maintain the original spark without being generic? |
+---
+
+## Agent 5: Voice Generator
+
+**Script:** `pipeline/scripts/voice_mode.py`
+
+**Role:** Generate original text in the author's voice.
+
+**Features:**
+- CLI mode: `--topic "..." --chars 35000`
+- Interactive fallback
+- Iterative generation for long outputs (splits into parts)
+- Comma-formatted numbers supported (`35,000`)
+- Output saved to `pipeline/output/` as timestamped `.md` files
+- Session logged to `logs/`
 
 ---
 
@@ -99,22 +93,22 @@
 
 ```mermaid
 graph LR
-    A[📁 sources/] --> B[🧹 Curator]
-    B --> C[📂 curated/]
-    C --> D[🔍 Analyst]
-    D --> E[📝 style_context.md]
-    C --> F[🏗️ Builder]
+    A[sources/] --> B[Curator]
+    B --> C[pipeline/curated/]
+    C --> D[Analyst]
+    D --> E[pipeline/dataset/style_context.md]
+    C --> F[Builder]
     E --> F
-    F --> G[📦 dataset/]
-    G --> H[🧪 Tester]
+    F --> G[pipeline/dataset/]
+    G --> H[Tester]
     H -->|Refine| D
-    H -->|Approve| I[✅ Configured LLM]
+    H -->|Approve| I[Voice Generator]
 ```
 
 ---
 
 ## Notes
 
-- Agents can run as independent scripts or as specialized prompts within the LLM.
-- The flow is iterative: Tester results feed refinements back to the Analyst and Builder.
-- Each agent maintains logs in `docs/` for traceability.
+- All agents are run automatically via `start.py`
+- The flow is iterative: Tester results feed back to Analyst and Builder
+- Each agent logs activity for traceability

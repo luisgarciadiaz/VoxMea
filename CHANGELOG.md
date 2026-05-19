@@ -1,78 +1,56 @@
-# 📋 Changelog — VoxMea
+# Changelog — VoxMea
 
 All notable changes to this project will be documented in this file.
 
-Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+---
+
+## [0.3.0] — 2026-05-19
+
+### Added
+- `start.py` — Pipeline launcher with two modes:
+  - Interactive: `python start.py` shows menu (create text / rebuild voice / quit)
+  - Direct: `python start.py 1 "topic" 35000` skips menu and generates
+  - `[q]` option to quit
+- `pipeline/` — All internal machinery lives here (scripts, curated, dataset, prompts, tests, output)
+- `Documentation/` — Docs folder at root level
+- `logs/` — Session logs at root level
+- Iterative text generation in `voice_mode.py` — splits long requests into parts and keeps continuing until target length is reached
+- Support for comma-formatted numbers like `35,000` in character count input
+
+### Changed
+- `start.py` — Quiet mode: only shows errors/warnings, no [OK] spam
+- `curate.py` — All paths resolved via `Path(__file__).resolve().parent` so scripts work regardless of CWD; output lands in `pipeline/curated/`
+- `voice_mode.py` — `import re` moved to top of file; `save_output` accepts `target_chars` parameter
+- `.env` — Default model changed to `llama3:latest`, context window bumped to 32768
+- Root folder simplified: only `sources/`, `Documentation/`, `logs/`, `pipeline/`, `start.py`, `.env`, `README.md`, `requirements.txt`, `.gitignore`, `agents.md`, `architecture.md`, `CHANGELOG.md`
+- `agents.md`, `architecture.md`, `CHANGELOG.md` moved back to root level
+
+### Fixed
+- `curate.py` — CLI args no longer override module-level paths with relative defaults
+- `voice_mode.py` — `NameError: name 're' is not defined` on save
 
 ---
 
 ## [0.2.0] — 2026-05-19
 
 ### Added
-- 🎉 **Phase 1: Data Extraction & Curation** — Complete pipeline implementation.
-- 📄 `redaction_patterns.yaml` — Configurable regex patterns for sensitive data redaction (emails, phones, SSNs, credit cards, URLs, IPs, addresses).
-- 🐍 `scripts/curate.py` — Full text curation pipeline:
-  - Format support: `.md`, `.txt`, `.eml`, `.html`, `.docx`, `.pdf`.
-  - YAML frontmatter stripping (Obsidian-style `---` blocks).
-  - Code block detection and removal.
-  - Sensitive data redaction with configurable patterns.
-  - Text classification via keyword heuristics (narrative, argumentative, informal, technical).
-  - Statistics output (files processed, words, redactions, classification breakdown).
-  - CLI arguments for source/output/config paths and verbose mode.
-- 🐍 `scripts/analyze_style.py` — Linguistic style analysis:
-  - Vocabulary frequency, unique word ratio, bigram/trigram detection.
-  - Sentence structure: average length, std deviation, median, longest/shortest examples.
-  - Punctuation fingerprint: em-dashes, ellipses, exclamations, etc.
-  - Filler word and connector detection.
-  - Tone mapping (formal/informal balance, humor markers).
-  - Generates `dataset/style_context.md` — a natural-language system prompt.
-- 🐍 `scripts/build_dataset.py` — Dataset construction:
-  - Unified corpus (`dataset/unified_corpus.txt`) with document headers.
-  - Smart chunking respecting paragraph boundaries (configurable size/overlap).
-  - JSONL generation (`dataset/dataset.jsonl`) for fine-tuning.
-  - Token counting via tiktoken (optional) or character-based estimation.
-  - Chunk storage for RAG integration.
-- 🐍 `scripts/test_generation.py` — Generation testing:
-  - Multi-backend support: Ollama (`/api/generate`), LM Studio (`/v1/chat/completions`), llama.cpp (`/completion`).
-  - Loads test prompts from `prompts/test_prompts.md`.
-  - Comparison metrics: lexical similarity, sentence length, punctuation similarity, readability.
-  - Timestamped result reports in `tests/results/`.
-- 🐍 `scripts/voice_mode.py` — Voice generation mode:
-  - CLI usage: `python scripts/voice_mode.py --topic "morning routines" --chars 2000`.
-  - Interactive fallback when no arguments given.
-  - Saves output to `output/` as timestamped `.md` files.
-  - Session logging to `docs/logs/`.
-- 📄 `.env` — Environment configuration template (backend, endpoints, model, context settings).
-- 📄 `requirements.txt` — Python dependencies (beautifulsoup4, pyyaml, requests, python-dotenv, python-docx, pymupdf, tiktoken).
-- 💬 `prompts/system_prompt.md` — Base system prompt template with style profile placeholder, instructions, and guardrails.
-- 💬 `prompts/test_prompts.md` — 10 test prompts covering same-topic, new-topic, opinion, casual, short-form, long-form, technical, emotional, descriptive, and abstract writing.
-- 📂 `output/` — Directory for generated voice mode outputs.
-
-### Changed
-- 📦 Removed stale `.gitkeep` files from directories now containing real files.
-- 🔒 Updated `.gitignore` — uncommented `sources/` protection and added `output/`.
+- Phase 1: Data Extraction & Curation — Complete pipeline implementation.
+- `redaction_patterns.yaml` — Configurable regex patterns for sensitive data redaction.
+- `scripts/curate.py` — Full text curation pipeline with format support (.md, .txt, .eml, .html, .docx, .pdf), YAML frontmatter stripping, code block removal, redaction, classification, and statistics.
+- `scripts/analyze_style.py` — Linguistic style analysis: vocabulary, sentence structure, punctuation fingerprint, filler/connector detection, tone mapping. Generates `dataset/style_context.md`.
+- `scripts/build_dataset.py` — Dataset construction: unified corpus, smart chunking, JSONL generation, token counting.
+- `scripts/test_generation.py` — Multi-backend testing (Ollama, LM Studio, llama.cpp) with comparison metrics.
+- `scripts/voice_mode.py` — Voice generation mode: CLI and interactive, saves to `output/`, session logging.
+- `.env` — Environment configuration template.
+- `requirements.txt` — Python dependencies.
+- `prompts/system_prompt.md` — Base system prompt template.
+- `prompts/test_prompts.md` — 10 test prompts.
 
 ---
 
 ## [0.1.0] — 2026-05-19
 
 ### Added
-- 🎉 **Project initialization** — Base VoxMea structure.
-- 📁 Directory structure:
-  - `sources/` — Ingestion folder for raw unprocessed texts.
-    - `obsidian/` — Exported Obsidian notes.
-    - `emails/` — Exported emails.
-    - `articles/` — Articles and posts.
-  - `curated/` — Filtered and classified texts.
-    - Subdirectories by type: `narrative/`, `argumentative/`, `informal/`, `technical/`.
-  - `dataset/` — Final dataset for the LLM.
-  - `scripts/` — Python processing scripts.
-  - `prompts/` — System prompts and templates.
-  - `tests/` — Control texts and results.
-  - `docs/` — Documentation and logs.
-- 📄 Initial documentation:
-  - `README.md` — Project overview, phases, and quickstart.
-  - `agents.md` — Definition of 4 agents: Curator, Analyst, Builder, Tester.
-  - `architecture.md` — Technical architecture, data flows, and design decisions.
-  - `CHANGELOG.md` — This file.
-- 🔧 `.gitkeep` files in empty directories to preserve structure in Git.
+- Project initialization — Base VoxMea structure.
+- Directory structure: `sources/`, `curated/`, `dataset/`, `scripts/`, `prompts/`, `tests/`, `docs/`.
+- Initial documentation: `README.md`, `agents.md`, `architecture.md`, `CHANGELOG.md`.
